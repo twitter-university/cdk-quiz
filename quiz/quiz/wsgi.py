@@ -16,8 +16,6 @@ framework.
 import os
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "quiz.settings")
-p = '/home/simeon/QUIZ/bin/activate_this.py'
-execfile(p, dict(__file__=p))
 # This application object is used by any WSGI server configured to use this
 # file. This includes Django's development server, if the WSGI_APPLICATION
 # setting points here.

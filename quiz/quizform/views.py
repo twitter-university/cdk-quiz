@@ -29,7 +29,7 @@ def process_json(data):
 @csrf_exempt
 def handle(request):
     """Initial naive view."""
-    data = ""
+    text = ""
     if 'json' in request.POST:
         dct, text = process_json(request.POST['json'])
         dct['Date'] = datetime.datetime.now().isoformat()
@@ -48,14 +48,13 @@ def handle(request):
 
 @csrf_exempt
 def handle_complicated(request, instructor, classname, quiz=None):
-    data = ""
+    text = ""
     email = ['simeonf@gmail.com']
     try:
         u = User.objects.get(username=instructor)
         email.append(u.email)
     except User.DoesNotExist:
         pass
-    
     if 'json' in request.POST:
         dct, text = process_json(request.POST['json'])
         collection = db.quiz_results
