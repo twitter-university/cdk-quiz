@@ -3,6 +3,9 @@
 # C extensions
 *.so
 
+# sqlite db
+*.sqlite3
+
 # Packages
 *.egg
 *.egg-info
@@ -33,3 +36,6 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# emacs!
+*~
