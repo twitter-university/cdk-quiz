@@ -5,7 +5,7 @@ DEBUG = False #True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
-    # ('Simeon', 'simeonf@gmail.com'),
+    ('Simeon', 'simeonf@gmail.com'),
 )
 
 DEFAULT_FROM_EMAIL = 'simeon@marakana.com'
