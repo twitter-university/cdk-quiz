@@ -76,9 +76,12 @@ def dashboard(request, instructor=None, classname=None, quiz=None):
     if request.POST:
         _id = request.POST.get('id')
         status = request.POST.get('pass')
-        delete = request.POST.get('delete', False)        
+        delete = request.POST.get('delete', False)
         if _id:
             if status is not None:
+                # convert from text to Python boolean
+                if isinstance(status, (str, unicode)):
+                    status = dict(true=True, false=False).get(status, False)
                 res = collection.update({"_id": ObjectId(_id)}, {'$set': {'pass': status}})
             elif delete:
                 #res = collection.remove({"_id": ObjectId(_id)})
