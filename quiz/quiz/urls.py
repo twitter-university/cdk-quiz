@@ -4,7 +4,7 @@ from django.conf.urls import patterns, include, url
 from django.contrib import admin
 admin.autodiscover()
 
-handler500 = 'quizform.error'
+handler500 = 'quizform.views.error'
 urlpatterns = patterns('',
     # Examples:
     # url(r'^$', 'quiz.views.home', name='home'),
