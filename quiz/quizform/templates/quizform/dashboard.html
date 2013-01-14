@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load quizform_tags %}
+{% block content %}
+<style type="text/css">
+  pre.min{max-height:20px;overflow:hidden;}
+  .btn.status, .btn.delete{ width:140px;}
+  .table td{background-color:#FFF;}
+  pre{background-color: #F0F0F0;}
+</style>
+<script>
+$(function(){
+  $("pre").click(function(){$(this).toggleClass("min");});
+  $(".status").click(function(e){
+        e.preventDefault();
+        var link = $(this);
+        $.post(document.location.href,
+          {'pass': $(this).hasClass("btn-success"), 'id': this.id.split("-")[1]},
+          function(){
+              link.toggleClass("btn-warning btn-success");
+              if(link.hasClass('btn-warning')){
+                     link.text("Mark as Failed");
+              }
+              else{
+                     link.text("Mark as Passed");
+              }
+          });
+  });
+  $(".delete").click(function(e){
+        e.preventDefault();
+        if(! confirm("Are you sure you want to delete this record?")){
+           return 1;
+        }
+        var link = $(this);
+        $.post(document.location.href,
+          {'delete':1, 'id': this.id.split("-")[1]},
+          function(){
+            var tr = link.parents("tr");
+            tr.hide();
+            tr.prev().hide();
+          });
+  });
+});
+</script>
+{% if rows %}
+<h2>{{ rows|length }} rows in result set</h2>
+<p><a href="?csv=1">Export as .csv</a></p>
+
+  <table class="table table-condensed">
+    <thead>
+     <tr>
+      <th>Intructor</th>
+      <th>Class</th>
+      <th>Quiz</th>
+      <th style="width:100px;">Date</th>
+      <th>Data</th>
+     </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.instructor }}</td>
+          <td>{{ row.classname }}</td>
+          <td>{{ row.quiz }}</td>
+          <td>{{ row.submission_date }}</td>
+          <td rowspan="2">
+            <table class="table-bordered table-hover">
+              {% for key,val in row.results.items %}
+                {% if not key == "_id" %}
+                <tr><td style="width:100px;">{{ key }}:</td>
+                  <td>
+                    {% if val|contains_nl %}
+                      <pre class="min">{{ val }}</pre>
+                    {% else %}{{ val }}
+                    {% endif %}
+                 </td></tr>
+                {% endif %}
+            {% endfor %}
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="4">
+            {% if row.pass %}
+              <a id="id-{{ row|id }}" class="btn btn-warning status" href="#">Mark as Failed</a>
+            {% else %}
+              <a id="id-{{ row|id }}" class="btn btn-success status" href="#">Mark as Passed</a>
+            {% endif %}
+              <br><br>
+              <a id="id-{{ row|id }}" class="btn btn-danger delete" href="#">Delete Record</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+ No data matched that query...
+{% endif %}
+{% endblock %}

@@ -1,14 +1,15 @@
 import json, datetime
+from bson.objectid import ObjectId
 import pymongo
 from django.shortcuts import get_object_or_404, render
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
-
+from django.core.cache import cache
 conn = pymongo.Connection('mongodb://quiz:quiz@ds045757.mongolab.com:45757/quiz')
 db = conn.quiz
 
@@ -68,3 +69,27 @@ def handle_complicated(request, instructor, classname, quiz=None):
 def error(request):
     return render(request, "500.html", {})
 
+@csrf_exempt
+@login_required
+def dashboard(request, instructor=None, classname=None, quiz=None):
+    collection = db.quiz_results
+    if request.POST:
+        _id = request.POST.get('id')
+        status = request.POST.get('pass', False)
+        delete = request.POST.get('delete', False)        
+        if _id:
+            if status:
+                res = collection.update({"_id": ObjectId(_id)}, {'$set': {'pass': status}})
+            elif delete:
+                #res = collection.remove({"_id": ObjectId(_id)})
+                res = collection.update({"_id": ObjectId(_id)}, {'$set': {'hide': True}})
+            cache.delete("ROWS")
+        return HttpResponse("OK")
+
+    rows = cache.get("ROWS")
+    if rows is None:
+        rows = [r for r in collection.find({'hide': {'$ne':True}}).sort('submission_date', 1)[:100]]
+        cache.set("ROWS", rows, 60)
+    if request.GET.get('csv'):
+        return render(request, 'quizform/dashboard.csv', {'rows': rows}, content_type="text/csv")
+    return render(request, 'quizform/dashboard.html', {'rows': rows})

@@ -15,7 +15,14 @@ urlpatterns = patterns('',
 
     # Uncomment the next line to enable the admin:
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^accounts/login/$', 'django.contrib.auth.views.login'),
     url(r'^$', 'quizform.views.handle'),
     url(r'^(?P<instructor>[^/]+)/(?P<classname>[^/]+)/(?P<quiz>[^/]*)/?$',
             'quizform.views.handle_complicated'),
+    url(r'^dashboard/(?P<instructor>[^/]+)/(?P<classname>[^/]+)/(?P<quiz>[^/]+)/$',
+            'quizform.views.dashboard'),
+    url(r'^dashboard/(?P<instructor>[^/]+)/(?P<classname>[^/]+)/$',
+            'quizform.views.dashboard'),
+    url(r'^dashboard/(?P<instructor>[^/]+)/$', 'quizform.views.dashboard'),
+    url(r'^dashboard/$', 'quizform.views.dashboard'),
 )
