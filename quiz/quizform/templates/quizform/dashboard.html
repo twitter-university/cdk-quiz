@@ -6,24 +6,24 @@
   .btn.status, .btn.delete{ width:140px;}
   .table td{background-color:#FFF;}
   pre{background-color: #F0F0F0;}
+  textarea{ width:290px;}
+  .breadcrumb { font-size:2em;}
 </style>
 <script>
 $(function(){
   $("pre").click(function(){$(this).toggleClass("min");});
   $(".status").click(function(e){
-        e.preventDefault();
-        var link = $(this);
+        var d = {'pass': "btn-success", 'fail': 'btn-danger', '': 'btn-warning'};
+        var val = $(this).val();
+        var table = $(this).parents("table:first").find('td').removeClass().addClass(d[val]);
         $.post(document.location.href,
-          {'pass': $(this).hasClass("btn-success"), 'id': this.id.split("-")[1]},
-          function(){
-              link.toggleClass("btn-warning btn-success");
-              if(link.hasClass('btn-warning')){
-                     link.text("Mark as Failed");
-              }
-              else{
-                     link.text("Mark as Passed");
-              }
-          });
+          {'pass': val, 'id': this.id.split("-")[1]});
+  });
+  $(".note").click(function(e){
+        e.preventDefault();
+        var val = $(this).prev().val();
+        $.post(document.location.href,
+          {'note': val, 'id': this.id.split("-")[1]});
   });
   $(".delete").click(function(e){
         e.preventDefault();
@@ -42,6 +42,18 @@ $(function(){
 });
 </script>
 {% if rows %}
+<div class="breadcrumb">
+{% if quiz %}
+  Classname: <a href="..">{{ classname }}</a>
+  {% else %}
+      {% if class %}
+      Instructor: <a href="..">{{ instructor }}</a>
+      {% else %}
+      <a href="..">View All</a>
+      {% endif %}
+{% endif %}
+</div>
+
 <h2>{{ rows|length }} rows in result set</h2>
 <p><a href="?csv=1">Export as .csv</a></p>
 
@@ -80,13 +92,34 @@ $(function(){
         </tr>
         <tr>
           <td colspan="4">
-            {% if row.pass %}
-              <a id="id-{{ row|id }}" class="btn btn-warning status" href="#">Mark as Failed</a>
-            {% else %}
-              <a id="id-{{ row|id }}" class="btn btn-success status" href="#">Mark as Passed</a>
-            {% endif %}
+            {% with row.pass as status %}
+            <table>
+              <tr>
+              <td style="width:100px;" class="{{ status|status_class }}">
+
+              <label for="id-{{ row|id }}-pass">
+                <input class="status" type="radio" name="id-{{ row|id }}" id="id-{{ row|id }}-pass" value="pass"
+                                   {% if status|stringformat:"s" == "True" %}checked{% endif %}> Pass
+              </label>
+              </td>
+              <td style="width:100px;" class="{{ status|status_class }}">
+              <label for="id-{{ row|id }}-fail">
+                <input class="status" type="radio" name="id-{{ row|id }}" id="id-{{ row|id }}-fail" value="fail"
+                       {% if status|stringformat:"s" == "False" %}checked{% endif %}> Fail
+              </label>
+              </td>
+              <td style="width:100px;" class="{{ status|status_class }}">
+              <label for="id-{{ row|id }}-none">
+                <input class="status" type="radio" name="id-{{ row|id }}" id="id-{{ row|id }}-None" value=""
+                  {% if status|stringformat:"s" == "None" or status|stringformat:"s" == "" %}checked{% endif %}> Un-Graded
+              </label>
+              </td></tr></table>
+              {% endwith %}
+              <br>
+              <textarea id="id-{{ row|id }}-text"> {{ row.note }}</textarea><br>
+              <a id="id-{{ row|id }}-note" class="btn note" href="#">Update Note</a>
+              <a id="id-{{ row|id }}-delete" class="btn btn-danger delete" href="#">Delete Record</a>
               <br><br>
-              <a id="id-{{ row|id }}" class="btn btn-danger delete" href="#">Delete Record</a>
           </td>
         </tr>
       {% endfor %}
@@ -94,5 +127,6 @@ $(function(){
   </table>
 {% else %}
  No data matched that query...
-{% endif %}
+{% endif %}<br><br>
+<a href="?all=1">Show deleted records</a>  
 {% endblock %}

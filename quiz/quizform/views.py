@@ -1,4 +1,4 @@
-import json, datetime
+import json, datetime, os
 from bson.objectid import ObjectId
 import pymongo
 from django.shortcuts import get_object_or_404, render
@@ -69,30 +69,94 @@ def handle_complicated(request, instructor, classname, quiz=None):
 def error(request):
     return render(request, "500.html", {})
 
+class Cache(object):
+    def __init__(self, time):
+        self.time = time
+        
+    def __call__(self, f):
+        def inner(*args, **kwargs):
+            key = args[0]
+            rows = cache.get(key)
+            if rows:
+                return rows
+            rows = f(*args, **kwargs)
+            cache.set(key, rows, self.time)
+            return rows
+        return inner
+
+@Cache(200)
+def find(key, collection, args=None, page=100):
+    if args is None:
+        args = {}
+    default = {'hide': {'$ne':True}}
+    default.update(args)
+    rows = [r for r in collection.find(default)
+            .sort('submission_date', pymongo.DESCENDING)[:page]]
+    return rows
+
 @csrf_exempt
 @login_required
 def dashboard(request, instructor=None, classname=None, quiz=None):
     collection = db.quiz_results
     if request.POST:
         _id = request.POST.get('id')
-        status = request.POST.get('pass')
+        status = request.POST.get('pass', None)
+        note = request.POST.get('note', None) 
         delete = request.POST.get('delete', False)
         if _id:
             if status is not None:
                 # convert from text to Python boolean
-                if isinstance(status, (str, unicode)):
-                    status = dict(true=True, false=False).get(status, False)
+                status = {'pass': True, 'fail': False, '': None}.get(status, False)
                 res = collection.update({"_id": ObjectId(_id)}, {'$set': {'pass': status}})
             elif delete:
                 #res = collection.remove({"_id": ObjectId(_id)})
                 res = collection.update({"_id": ObjectId(_id)}, {'$set': {'hide': True}})
-            cache.delete("ROWS")
+            elif note:
+                res = collection.update({"_id": ObjectId(_id)}, {'$set': {'note': note}})
         return HttpResponse("OK")
-
-    rows = cache.get("ROWS")
-    if rows is None:
-        rows = [r for r in collection.find({'hide': {'$ne':True}}).sort('submission_date', 1)[:100]]
-        cache.set("ROWS", rows, 60)
+    # setup filters
+    key = []
+    query = {}
+    if instructor and instructor.isalnum() and instructor != "all":
+        query.update({'instructor': instructor})
+        key.append("i" + instructor)
+    if classname:
+        query.update({'classname': classname})
+        key.append("C" + classname)
+    if str(request.GET.get('d')).isdigit():
+        key.append("D" + request.GET['d'])
+        days_past = int(request.GET['d'])
+        date_past = datetime.datetime.now() - datetime.timedelta(days=days_past)
+        query.update({"submission_date": {"$gte": date_past}})
+    if request.GET.get('all'):
+        default = {'hide': {'$ne':True}}
+        query.update({'hide': True})
+        key.append("DEL")
+        
+        
+    rows = find("ROWS:" + "/".join(key), collection, query)
+    print query
+    # Show front page w/ sampling of records
+    if instructor is None:
+        func = """function(d){
+                      dt = new Date(d.submission_date);
+                      return {'dt': new Date(dt.getFullYear(), dt.getMonth(), dt.getDate())};
+               }"""
+        start = datetime.datetime.now() - datetime.timedelta(days=31)
+        counter = 'function(doc, p){p.count++;}'
+        dates = sorted(collection.group(func,
+                                      {"submission_date": {"$gte": start}},
+                                      {'count':0},
+                                      counter), key=lambda d: d['dt'])
+        instructors = collection.distinct('instructor')
+        classes = collection.distinct('classname')
+        return render(request, 'quizform/dashboard-aggregate.html', {'rows': rows, 'classes': classes,
+                                                                     'instructors': instructors, 'dates': dates})
+    # or show csv view of current page
     if request.GET.get('csv'):
-        return render(request, 'quizform/dashboard.csv', {'rows': rows}, content_type="text/csv")
-    return render(request, 'quizform/dashboard.html', {'rows': rows})
+            return render(request, 'quizform/dashboard.csv', {'rows': rows}, content_type="text/csv")
+    
+    # or show detail pages
+    ctx = {'rows': rows, 'instructor': instructor, 'classname': classname, 'quiz': quiz}
+    return render(request, 'quizform/dashboard.html', ctx)
+    

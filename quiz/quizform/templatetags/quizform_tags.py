@@ -20,3 +20,17 @@ def id(obj):
     return obj.get('_id')
 
 
+@register.filter
+def status_class(status):
+    """Return bootstrap class name mapping to status. """
+    vals = {True: "btn-success", False: 'btn-danger'}
+    return vals.get(status, 'btn-warning')
+
+@register.filter
+def status(status):
+    """Return bootstrap class name mapping to status. """
+    vals = {True: "Pass", False: 'Fail'}
+    print repr(status)
+    return vals.get(status, 'Ungraded')
+
+
