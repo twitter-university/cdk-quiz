@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load quizform_tags %}
+{% block content %}
+<style type="text/css">
+  pre.min{max-height:20px;overflow:hidden;}
+  .btn.status, .btn.delete{ width:140px;}
+  .table td{background-color:#FFF;}
+  pre{background-color: #F0F0F0;}
+</style>
+<script>
+$(function(){
+  $("pre").click(function(){$(this).toggleClass("min");});
+  $(".status").click(function(e){
+        var d = {'pass': "btn-success", 'fail': 'btn-danger', '': 'btn-warning'};
+        var val = $(this).val();
+        var table = $(this).parents("table:first").find('td').removeClass().addClass(d[val]);
+        $.post(document.location.href,
+          {'pass': val, 'id': this.id.split("-")[1]},
+          function(){
+
+        });
+
+  });
+  $(".delete").click(function(e){
+        e.preventDefault();
+        if(! confirm("Are you sure you want to delete this record?")){
+           return 1;
+        }
+        var link = $(this);
+        $.post(document.location.href,
+          {'delete':1, 'id': this.id.split("-")[1]},
+          function(){
+            var tr = link.parents("tr");
+            tr.hide();
+            tr.prev().hide();
+          });
+  });
+});
+</script>
+<div class="row">
+  <div class="span4">
+
+    <h2>Filter Records</h2>
+    <label>By Instructor:</label>
+    <p>
+    {% for instructor in instructors %}
+     <a href="./{{ instructor }}/">{{instructor}}</a> /
+    {% endfor %}
+     </p>
+    <label>By Class:</label>
+    <p>
+    {% for k in classes %}
+     <a href="./all/{{ k }}/">{{k}}</a> /
+    {% endfor %}
+    </p>
+     <label>By Date Range:</label>
+     <p>
+     <a href="./?d=30">Last 30 Days</a> / <a href="./?d=7">Last 7 Days</a> / <a href="./?d=1">Last 24 hours</a>
+     </p>
+    </fieldset>
+
+  </div>
+  <div class="span8">
+  <h2>Submission Frequency By Date</h2>
+  <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+  <script type="text/javascript">
+    google.load('visualization', '1', {packages: ['annotatedtimeline']});
+  function draw() {
+  var data = new google.visualization.DataTable();
+  data.addColumn('date', 'Date');
+  data.addColumn('number', 'Submissions');
+  data.addRows([
+    {% for row in dates %}
+      [new Date({{ row.dt.year }}, {{ row.dt.month }},{{ row.dt.day }}), {{ row.count }}]
+      {% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]);
+
+   var annotatedtimeline = new google.visualization.AnnotatedTimeLine(
+       document.getElementById('visualization'));
+   annotatedtimeline.draw(data, {'displayAnnotations': true});
+  }
+        $(draw);
+
+  </script>
+  <div id="visualization" style="height:220px;width:600px;"></div>
+  </div>
+</div>
+
+{% if rows %}
+<h2>Results</h2>
+  <table class="table">
+    <thead>
+     <tr>
+      <th>ID</th>
+      <th>Intructor</th>
+      <th>Class</th>
+      <th>Quiz</th>
+      <th>Date</th>
+      <th>Status</th>
+      <th>Notes</th>
+     </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td><a href="./{{ row.instructor }}/{{ row.classname }}/{{ row.quiz }}/?id={{ row|id }}">{{ row|id }}</a></td>
+          <td><a href="./{{ row.instructor }}/">{{ row.instructor }}</a></td>
+          <td><a href="./{{ row.instructor }}/{{ row.classname }}/">{{ row.classname }}</a></td>
+          <td><a href="./{{ row.instructor }}/{{ row.classname }}/{{ row.quiz }}/">{{ row.quiz }}</a></td>
+          <td>{{ row.submission_date }}</td>
+          <td>{{ row.status|status }}</td>
+          <td>{{ row.note }}</td>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+ No data matched that query...
+{% endif %}
+{% endblock %}
